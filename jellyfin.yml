@@ -1,0 +1,22 @@
+---
+- name: "Make LXC"
+  hosts: "localhost"
+  remote_user: "root"
+  vars:
+    - item: "jellyfin"
+    - item_lxc: "jellyfin_lxc"
+
+  tasks:
+  - name: Create Jellyfin Container Alpine
+    community.general.lxc_container:
+      name: "{{ item_lxc }}"
+      container_log: true
+      template: "download"
+      template_options: "--dist alpine --release 3.19 --arch amd64"
+      state: "started"
+
+  - name: Install Jellyfin
+    ansible.builtin.command: "lxc-attach -n {{ item_lxc }} apk add {{ item }}"
+
+  - name: Start Jellyfin Service
+    ansible.builtin.command: "lxc-attach -n {{ item_lxc }} rc-service {{ item }} start"
