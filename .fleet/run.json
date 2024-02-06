@@ -1,0 +1,11 @@
+{
+    "configurations": [
+        {
+            "type": "command",
+            "name": "Ansible",
+            "program": "/bin/ansible-playbook",
+            "args": ["/home/vboxuser/lxc_arr_stack/jellyfin.yml"],
+        },
+        
+    ]
+}

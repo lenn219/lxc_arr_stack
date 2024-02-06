@@ -1,5 +1,5 @@
 ---
-- name: "Init Jellyfin (privileged)"
+- name: "Init Apps"
   hosts: "local_system"
   connection: "local"
   vars:
