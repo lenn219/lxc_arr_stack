@@ -1,31 +1,23 @@
 ---
 - name: "Init Apps"
-  hosts: "local_system"
+  hosts: "localhost"
   connection: "local"
   vars:
-    - jellyfin: "jellyfin"
-    - jellyfin_lxc: "jellyfin-lxc"
     - caddy: "caddy"
     - caddy_lxc: "caddy-lxc"
 
   tasks:
-  - name: Create Jellyfin Container Alpine
+  - name: Create Caddy Container Alpine
     community.general.lxc_container:
-      name: "{{ jellyfin_lxc }}"
+      name: "{{ caddy_lxc }}"
       container_log: true
       template: "download"
       template_options: "--dist alpine --release 3.19 --arch amd64"
       state: "started"
-#
-#  - name: Install Jellyfin
-#    ansible.builtin.command: "lxc-attach -n {{ jellyfin_lxc }} apk add {{ jellyfin }}"
-#
-#  - name: Start Jellyfin Service
-#    ansible.builtin.command: "lxc-attach -n {{ jellyfin_lxc }} rc-service {{ jellyfin }} start"
 
-  - name: Create Container Caddy
-    ansible.builtin.command: "lxc-create -n {{ caddy_lxc }} -t download -- --dist alpine --release 3.19 --arch amd64"
-
+#  - name: Create Container Caddy
+#    ansible.builtin.command: "lxc-create -n {{ caddy_lxc }} -t download -- --dist alpine --release 3.19 --arch amd64"
+#
   - name: Start Container Caddy
     ansible.builtin.command: "lxc-start -n {{ caddy_lxc }}"
 

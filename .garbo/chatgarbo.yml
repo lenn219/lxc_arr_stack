@@ -1,0 +1,36 @@
+---
+- name: Create and Configure Alpine-based LXC Containers with Jellyfin
+  hosts: localhost
+  become: yes
+#  become_root: true
+  gather_facts: yes
+
+  tasks:
+    - name: Ensure lxc-python3 package is installed
+      package:
+        name: python3-lxc
+        state: present
+
+    - name: Create LXC Containers
+      become: yes
+      community.general.lxc_container:
+        name: "container{{ item }}"
+        template: "download"
+        template_options: "--dist alpine --release 3.19 --arch amd64"
+        state: started
+        networks:
+          - name: eth0
+            type: veth
+            flags: up
+            link: lxcbr0
+            ipv4_address: "10.0.3.{{ 10 + item }}/24"
+        wait_for_network: true
+        publish_address: true
+      loop: "{{ range(1, 9) | list }}"
+
+#    - name: Install Jellyfin in the first container
+#      ansible.builtin.apk:
+#        name: jellyfin
+#      ansible.builtin.shell:
+#        cmd: "rc-update add jellyfin default && rc-service jellyfin start"
+#      when: item == 1

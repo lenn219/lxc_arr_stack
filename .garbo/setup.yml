@@ -1,0 +1,102 @@
+- hosts: localhost
+  connection: local
+  become: true
+  vars:
+  - interface: lxcbr0
+
+  tasks:
+  - name: apt lxc packages are installed on host
+    apt: name={{ item }}
+    with_items:
+    - lxc
+    - lxc-dev
+    - python3
+    - pip
+
+  - copy:
+      dest: /etc/default/lxc-net
+      content: |
+        USE_LXC_BRIDGE="true"
+
+  - copy:
+      dest: /etc/lxc/default.conf
+      content: |
+        lxc.net.0.type = veth
+        lxc.net.0.link = {{ interface }}
+        lxc.net.0.flags = up
+        lxc.net.0.hwaddr = 00:16:3e:xx:xx:xx
+
+  - service:
+      name: lxc-net
+      state: started
+
+  - name: apt lxc packages are installed on host
+    apt:
+      name: "{{ item }}"
+    with_items:
+    - python3-lxc
+    run_once: true
+    
+    
+- hosts: all
+  connection: local
+  become: true
+  vars:
+  - interface: lxcbr0
+  tasks:
+  - name: Load in local SSH key path
+    set_fact:
+      my_ssh_key: "{{ lookup('env','HOME') }}/.ssh/id_rsa.pub"
+
+  - name: interface device exists
+    command: ip addr show {{ interface }}
+    changed_when: false
+    run_once: true
+
+  - name: Local user has an SSH key
+    command: stat {{ my_ssh_key }}
+    changed_when: false
+    run_once: true
+
+  - name: containers exist and have local SSH key
+#    delegate_to: localhost
+    community.general.lxc_container:
+      name: "{{ inventory_hostname }}"
+      container_log: true
+      template: download
+      state: started
+      template_options: --dist alpine --release 3.19 --arch amd64
+#      lxc.net.0.type = veth                                                                                                                                                                             
+#lxc.net.0.link = lxcbr0                                                                                                                                                                           
+#lxc.net.0.flags = up                                                                                                                                                                              
+#lxc.net.0.hwaddr = 00:16:3e:d1:04:24 
+      container_config:
+        - "lxc.net.0.type = veth"
+        - "lxc.net.0.flags = up"
+        - "lxc.net.0.link = {{ interface }}"
+      container_command: |
+        if [ ! -d ~/.ssh ]; then
+          mkdir ~/.ssh
+          echo "{{ lookup('file', my_ssh_key) }}" | tee -a ~/.ssh/authorized_keys
+          sed -i 's/dhcp/manual/' /etc/network/interfaces && systemctl restart network
+        fi
+          
+        
+- hosts: all
+  connection: local
+  become: false
+  serial: 1
+  tasks:
+  - wait_for: host={{ ansible_host }} port=22
+
+  - name: container key is up-to-date locally
+    shell: ssh-keygen -R {{ ansible_host }}; (ssh-keyscan {{ ansible_host }} >> ~/.ssh/known_hosts)
+    
+    
+  - hosts: all
+  gather_facts: no
+  vars:
+  - ansible_user: root
+  tasks:
+  - name: install python on target machines
+    raw:  apk add python3
